@@ -60,6 +60,26 @@ npm run build
 npm start
 ```
 
+### Run permanently (macOS)
+
+Installs a LaunchAgent that starts on login and restarts if it crashes:
+
+```bash
+npm run service:install
+```
+
+Other commands:
+
+```bash
+npm run service:status
+npm run service:stop
+npm run service:start
+npm run service:restart
+npm run service:uninstall
+```
+
+Logs: `logs/mcp.out.log` and `logs/mcp.err.log`.
+
 Server listens at `http://localhost:3992/mcp` (or whatever `PORT` you set). Apple credentials stay in `.env` on the machine running the server — not in the MCP client config.
 
 ### MCP client config (URL only, no auth)

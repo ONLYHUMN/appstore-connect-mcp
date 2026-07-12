@@ -24,7 +24,14 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "service": "bash scripts/service.sh",
+    "service:install": "bash scripts/service.sh install",
+    "service:start": "bash scripts/service.sh start",
+    "service:stop": "bash scripts/service.sh stop",
+    "service:restart": "bash scripts/service.sh restart",
+    "service:status": "bash scripts/service.sh status",
+    "service:uninstall": "bash scripts/service.sh uninstall"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.5",
