@@ -48,14 +48,11 @@ function getAppStoreConfig(): AppStoreConfig {
     keyId: (process.env.APPLE_KEY_ID || '').trim(),
     issuerId: (process.env.APPLE_ISSUER_ID || '').trim(),
     privateKey: privateKey.trim(),
-    bundleId: (process.env.APPLE_BUNDLE_ID || '').trim(),
-    appStoreId: process.env.APPLE_APP_STORE_ID?.trim(),
   };
 
   console.log('📱 Apple Store Connect Config:');
   console.log('  Key ID:', config.keyId);
   console.log('  Issuer ID:', config.issuerId);
-  console.log('  Bundle ID:', config.bundleId);
   console.log('  Private Key:', privateKey ? 'Loaded' : 'Missing');
   
   return config;
@@ -852,7 +849,7 @@ async function main() {
   console.log('🚀 Starting Apple Store Connect MCP Server...');
   
   // Validate required environment variables
-  const requiredEnvVars = ['APPLE_KEY_ID', 'APPLE_ISSUER_ID', 'APPLE_PRIVATE_KEY', 'APPLE_BUNDLE_ID'];
+  const requiredEnvVars = ['APPLE_KEY_ID', 'APPLE_ISSUER_ID', 'APPLE_PRIVATE_KEY'];
   const missing = requiredEnvVars.filter(envVar => !process.env[envVar]);
   
   if (missing.length > 0) {
@@ -883,7 +880,6 @@ async function main() {
   try {
     await httpTransport.start();
     console.log('✅ Apple Store Connect MCP Server is running!');
-    console.log(`📱 Bundle ID: ${process.env.APPLE_BUNDLE_ID || 'Not configured'}`);
     console.log(`🔑 OAuth Authentication: ${process.env.OAUTH_ENABLED === 'true' ? 'Enabled' : 'Disabled'}`);
     if (process.env.OAUTH_ENABLED === 'true') {
       console.log(`🔐 OAuth Issuer: ${process.env.STYTCH_PROJECT_DOMAIN || 'https://test.stytch.com'}`);

@@ -47,7 +47,6 @@ A Model Context Protocol (MCP) server that provides tools for interacting with A
    APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
    your_private_key_content
    -----END PRIVATE KEY-----"
-   APPLE_BUNDLE_ID=com.yourcompany.yourapp
    ```
 
 ### Installation
@@ -80,8 +79,7 @@ Add to your Claude Desktop `claude_desktop_config.json`:
       "env": {
         "APPLE_KEY_ID": "your_key_id",
         "APPLE_ISSUER_ID": "your_issuer_id",
-        "APPLE_PRIVATE_KEY": "your_private_key",
-        "APPLE_BUNDLE_ID": "com.yourcompany.yourapp"
+        "APPLE_PRIVATE_KEY": "your_private_key"
       }
     }
   }

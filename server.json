@@ -40,20 +40,6 @@
           "name": "APPLE_PRIVATE_KEY"
         },
         {
-          "description": "Optional: Specific Bundle ID to filter apps",
-          "is_required": false,
-          "format": "string",
-          "is_secret": false,
-          "name": "APPLE_BUNDLE_ID"
-        },
-        {
-          "description": "Optional: Specific App Store ID",
-          "is_required": false,
-          "format": "string",
-          "is_secret": false,
-          "name": "APPLE_APP_STORE_ID"
-        },
-        {
           "description": "Enable OAuth authentication (true/false)",
           "is_required": false,
           "format": "string",

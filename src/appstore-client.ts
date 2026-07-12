@@ -9,8 +9,6 @@ export interface AppStoreConfig {
   keyId: string;
   issuerId: string;
   privateKey: string;
-  bundleId: string;
-  appStoreId?: string;
 }
 
 export interface AppInfo {

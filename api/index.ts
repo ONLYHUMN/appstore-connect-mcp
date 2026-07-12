@@ -54,8 +54,6 @@ app.get('/test-apple-config', (req, res) => {
     APPLE_KEY_ID: process.env.APPLE_KEY_ID ? 'Set' : 'Not set',
     APPLE_ISSUER_ID: process.env.APPLE_ISSUER_ID ? 'Set' : 'Not set',
     APPLE_PRIVATE_KEY: process.env.APPLE_PRIVATE_KEY ? `Set (${process.env.APPLE_PRIVATE_KEY.substring(0, 20)}...)` : 'Not set',
-    APPLE_BUNDLE_ID: process.env.APPLE_BUNDLE_ID ? 'Set' : 'Not set',
-    APPLE_APP_STORE_ID: process.env.APPLE_APP_STORE_ID ? 'Set' : 'Not set'
   });
 });
 
@@ -153,8 +151,6 @@ app.get('/test-apple-api', async (req, res) => {
       keyId: (process.env.APPLE_KEY_ID || '').trim(),
       issuerId: (process.env.APPLE_ISSUER_ID || '').trim(),
       privateKey: privateKey.trim(),
-      bundleId: (process.env.APPLE_BUNDLE_ID || '').trim(),
-      appStoreId: process.env.APPLE_APP_STORE_ID?.trim()
     });
     
     // Try to list apps
