@@ -117,15 +117,8 @@ export class OAuth2Authenticator {
     }
 
     return new Promise((resolve, reject) => {
-      // Accept tokens for any of our valid domains
-      const validAudiences: [string, ...string[]] = [
-        'https://asconnect.abundancecoach.ai',
-        'https://asconnect-mcp.vercel.app',
-        'https://asconnect-mcp-abundance-coach-ai.vercel.app'
-      ]
-      
       jwt.verify(token, this.getSigningKey.bind(this), {
-        audience: validAudiences, // Accept multiple audiences
+        audience: this.config.audience,
         issuer: this.config.issuer,
         algorithms: ['RS256', 'ES256']
       }, (err: any, decoded: any) => {

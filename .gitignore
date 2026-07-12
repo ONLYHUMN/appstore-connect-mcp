@@ -75,12 +75,7 @@ Thumbs.db
 *.p8
 AuthKey_*.p8
 
-# Vercel
-.vercel/
-.next/
-
 # Supabase
 supabase/.env
 supabase/.env.local
-.vercel
 .env*.local

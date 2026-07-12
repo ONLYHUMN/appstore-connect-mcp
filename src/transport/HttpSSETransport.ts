@@ -1,6 +1,5 @@
 /**
  * HTTP Server-Sent Events Transport for MCP
- * Compatible with Vercel Edge Functions and Supabase
  */
 
 import express from 'express';
@@ -39,7 +38,6 @@ export class HttpSSETransport {
    * Setup Express middleware
    */
   private setupMiddleware(): void {
-    // Trust proxy for Vercel
     this.app.set('trust proxy', 1);
     
     // CORS configuration
@@ -298,7 +296,7 @@ export class HttpSSETransport {
   }
   
   /**
-   * Get Express app for Vercel
+   * Get Express app (for embedding in another HTTP server)
    */
   getApp(): express.Application {
     return this.app;

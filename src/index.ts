@@ -23,7 +23,7 @@ function getAppStoreConfig(): AppStoreConfig {
     privateKey = privateKey.trim();
     console.log('🔑 Private key starts with:', privateKey.substring(0, 30));
     
-    // Check if private key is base64 encoded (Vercel stores it this way)
+    // Check if private key is base64 encoded
     if (!privateKey.includes('BEGIN PRIVATE KEY')) {
       try {
         const decoded = Buffer.from(privateKey, 'base64').toString('utf-8').trim();

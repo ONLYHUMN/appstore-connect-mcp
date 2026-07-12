@@ -56,7 +56,6 @@ The `.npmignore` file excludes:
 - Build configurations
 - Environment files
 - Documentation guides
-- Next.js/Vercel artifacts
 
 ## After Publishing
 

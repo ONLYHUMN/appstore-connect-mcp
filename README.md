@@ -1,6 +1,6 @@
 # Apple Store Connect MCP Server
 
-A Model Context Protocol (MCP) server that provides tools for interacting with Apple Store Connect API, enabling management of iOS/macOS apps, TestFlight, app metadata, and more through Claude Desktop or other MCP clients.
+A Model Context Protocol (MCP) server that provides tools for interacting with Apple Store Connect API, enabling management of iOS/macOS apps, TestFlight, app metadata, and more through Claude Desktop, Cursor, or other MCP clients.
 
 ## Features
 
@@ -40,51 +40,41 @@ A Model Context Protocol (MCP) server that provides tools for interacting with A
    - Navigate to Users and Access → Integrations → App Store Connect API
    - Create a new API key with appropriate permissions
 
-2. **Environment Variables**:
+2. **Environment Variables** — copy `.env.example` to `.env` and fill in:
+
    ```bash
    APPLE_KEY_ID=your_key_id
-   APPLE_ISSUER_ID=your_issuer_id  
+   APPLE_ISSUER_ID=your_issuer_id
    APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
    your_private_key_content
    -----END PRIVATE KEY-----"
+   PORT=3992
+   OAUTH_ENABLED=false
    ```
 
-### Installation
+### Run locally
 
 ```bash
-# Clone the repository
-git clone https://github.com/ryaker/appstore-connect-mcp.git
-cd appstore-connect-mcp
-
-# Install dependencies
 npm install
-
-# Build the project
 npm run build
-
-# Start the server
 npm start
 ```
 
-### Claude Desktop Configuration
+Server listens at `http://localhost:3992/mcp` (or whatever `PORT` you set). Apple credentials stay in `.env` on the machine running the server — not in the MCP client config.
 
-Add to your Claude Desktop `claude_desktop_config.json`:
+### MCP client config (URL only, no auth)
 
 ```json
 {
   "mcpServers": {
     "appstore-connect": {
-      "command": "node",
-      "args": ["/path/to/appstore-connect-mcp/dist/src/index.js"],
-      "env": {
-        "APPLE_KEY_ID": "your_key_id",
-        "APPLE_ISSUER_ID": "your_issuer_id",
-        "APPLE_PRIVATE_KEY": "your_private_key"
-      }
+      "url": "http://localhost:3992/mcp"
     }
   }
 }
 ```
+
+Keep the server process running while you use the client. With `OAUTH_ENABLED=false`, the `/mcp` endpoint has no client authentication.
 
 ## Usage
 
@@ -95,46 +85,6 @@ Once configured, you can ask Claude to:
 - "What are the recent customer reviews?"
 - "Create a new app store version"
 - "Add a beta tester to my TestFlight group"
-
-## Remote Deployment with OAuth
-
-### Auth0 Setup (for Remote Access)
-
-1. **Create Auth0 API**:
-   - Log into [Auth0 Dashboard](https://manage.auth0.com)
-   - Create new API (not Application)
-   - Note the Identifier (becomes your audience)
-
-2. **Configure OAuth Settings**:
-```env
-OAUTH_ENABLED=true
-AUTH0_DOMAIN=https://your-tenant.auth0.com
-AUTH0_AUDIENCE=https://your-api-identifier
-```
-
-3. **Deploy to Vercel**:
-```bash
-vercel --prod
-```
-
-4. **Configure Claude Desktop for Remote Access**:
-```json
-{
-  "mcpServers": {
-    "appstore-connect": {
-      "url": "https://your-deployment.vercel.app/mcp"
-    }
-  }
-}
-```
-
-Claude will automatically discover OAuth configuration and handle authentication.
-
-## Authentication
-
-This server supports two authentication modes:
-- **Local**: Direct API key authentication with Apple Store Connect
-- **Remote**: OAuth 2.0 via Auth0 for secure remote access
 
 ## Requirements
 

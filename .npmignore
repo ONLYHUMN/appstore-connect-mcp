@@ -3,15 +3,9 @@ src/
 *.ts
 !dist/**/*.d.ts
 
-# Next.js build output
-.next/
-.vercel/
-
 # Config and dev files
 .env
 .env.*
-.vercelignore
-vercel.json
 api/
 Dockerfile
 smithery.yaml
@@ -50,10 +44,6 @@ Thumbs.db
 
 # Backup files
 *.backup
-*.nextjs
-package.json.nextjs
-package-lock.json.nextjs
-package-vercel.json
 
 # Large data files
 3.2.json

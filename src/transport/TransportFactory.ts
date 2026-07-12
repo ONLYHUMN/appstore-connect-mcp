@@ -1,6 +1,6 @@
 /**
  * Transport Factory for multi-transport support
- * Supports stdio (default), HTTP/SSE for Vercel, and future transports
+ * Supports stdio (default) and HTTP/SSE
  */
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -40,12 +40,7 @@ export class TransportFactory {
           supabaseAnonKey: config.supabaseAnonKey
         });
         
-        // For Vercel, we don't start the server here
-        // The transport will be used by the Edge Function
-        if (process.env.VERCEL !== '1') {
-          await httpTransport.start();
-        }
-        
+        await httpTransport.start();
         return httpTransport.getTransport();
         
       default:
@@ -57,18 +52,11 @@ export class TransportFactory {
    * Detect transport type from environment
    */
   static detectTransportType(): TransportType {
-    // Check environment variables
     const envTransport = process.env.MCP_TRANSPORT;
     if (envTransport) {
       return envTransport as TransportType;
     }
     
-    // Check if running in Vercel
-    if (process.env.VERCEL === '1') {
-      return 'http-sse';
-    }
-    
-    // Check command line arguments
     const args = process.argv.slice(2);
     if (args.includes('--http')) {
       return 'http';
@@ -77,7 +65,6 @@ export class TransportFactory {
       return 'http-sse';
     }
     
-    // Default to stdio for backward compatibility
     return 'stdio';
   }
   

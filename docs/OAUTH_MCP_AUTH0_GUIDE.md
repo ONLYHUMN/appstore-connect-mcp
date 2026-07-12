@@ -238,8 +238,8 @@ res.status(401)
 jwt.verify(token, getSigningKey, {
   audience: [
     'https://your-server.com',
-    'https://your-deployment.vercel.app',
-    'https://your-preview-urls.vercel.app'
+    'https://your-server.example.com',
+    'http://localhost:3992'
   ],
   issuer: AUTH0_DOMAIN,
   algorithms: ['RS256']
