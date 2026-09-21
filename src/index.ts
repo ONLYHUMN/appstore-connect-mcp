@@ -1,6 +1,6 @@
 /**
  * Express-based MCP Server using Official MCP TypeScript SDK
- * Implements Apple Store Connect API tools with proper OAuth authentication
+ * Implements Apple Store Connect API tools
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -862,7 +862,6 @@ async function main() {
     process.exit(1);
   }
 
-  // Create HTTP transport with OAuth (like KMSmcp)
   console.log('🌐 Starting HTTP transport...');
   const httpTransport = new HttpTransport({
     port: parseInt(process.env.PORT || '3001', 10),
@@ -871,25 +870,13 @@ async function main() {
       origin: process.env.CORS_ORIGIN || '*',
       credentials: true,
     },
-    oauth: process.env.OAUTH_ENABLED === 'true' ? {
-      enabled: true,
-      issuer: process.env.STYTCH_PROJECT_DOMAIN || 'https://test.stytch.com',
-      audience: process.env.STYTCH_PROJECT_ID || 'default-audience',
-      jwksUri: process.env.STYTCH_JWKS_URI || `${process.env.STYTCH_PROJECT_DOMAIN || 'https://test.stytch.com'}/.well-known/jwks.json`,
-    } : undefined,
   });
 
-  // Set MCP server factory for HTTP transport
   httpTransport.setMcpServerFactory(() => createMcpServer());
 
   try {
     await httpTransport.start();
     console.log('✅ Apple Store Connect MCP Server is running!');
-    console.log(`🔑 OAuth Authentication: ${process.env.OAUTH_ENABLED === 'true' ? 'Enabled' : 'Disabled'}`);
-    if (process.env.OAUTH_ENABLED === 'true') {
-      console.log(`🔐 OAuth Issuer: ${process.env.STYTCH_PROJECT_DOMAIN || 'https://test.stytch.com'}`);
-      console.log(`👥 OAuth Audience: ${process.env.STYTCH_PROJECT_ID}`);
-    }
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

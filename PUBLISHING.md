@@ -68,7 +68,7 @@ curl https://registry.modelcontextprotocol.io/servers/io.github.ryaker/appstore-
 - The package.json must include `"mcpName": "io.github.ryaker/appstore-connect-mcp"` (already added)
 - The npm package name should match what's in server.json
 - Make sure all sensitive information is removed before publishing
-- The OAuth configuration in server.json points to the public deployment
+- Server configuration in server.json matches the published package
 
 ## Troubleshooting
 
@@ -90,7 +90,7 @@ The entry format for seed.json would be:
 ```json
 {
   "name": "io.github.ryaker/appstore-connect-mcp",
-  "description": "MCP server for Apple Store Connect API integration with OAuth authentication support",
+  "description": "MCP server for Apple Store Connect API integration",
   "version": "1.0.0",
   "author": {
     "name": "Ryan Aker",
@@ -103,7 +103,7 @@ The entry format for seed.json would be:
   },
   "license": "MIT",
   "categories": ["app-development", "analytics", "monitoring"],
-  "tags": ["apple", "app-store", "ios", "app-store-connect", "analytics", "reviews", "ratings", "oauth", "auth0"],
+  "tags": ["apple", "app-store", "ios", "app-store-connect", "analytics", "reviews", "ratings"],
   "runtime": "node",
   "packages": [
     {

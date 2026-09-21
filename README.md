@@ -49,7 +49,6 @@ A Model Context Protocol (MCP) server that provides tools for interacting with A
    your_private_key_content
    -----END PRIVATE KEY-----"
    PORT=3992
-   OAUTH_ENABLED=false
    ```
 
 ### Run locally
@@ -94,7 +93,7 @@ Server listens at `http://localhost:3992/mcp` (or whatever `PORT` you set). Appl
 }
 ```
 
-Keep the server process running while you use the client. With `OAUTH_ENABLED=false`, the `/mcp` endpoint has no client authentication.
+Keep the server process running while you use the client. The `/mcp` endpoint has no client authentication.
 
 ## Usage
 

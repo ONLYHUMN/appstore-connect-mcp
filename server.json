@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
   "name": "io.github.ryaker/appstore-connect-mcp",
-  "description": "MCP server for Apple Store Connect API integration with OAuth authentication support",
+  "description": "MCP server for Apple Store Connect API integration",
   "status": "active",
   "repository": {
     "url": "https://github.com/ryaker/appstore-connect-mcp",
@@ -38,41 +38,6 @@
           "format": "string",
           "is_secret": true,
           "name": "APPLE_PRIVATE_KEY"
-        },
-        {
-          "description": "Enable OAuth authentication (true/false)",
-          "is_required": false,
-          "format": "string",
-          "is_secret": false,
-          "name": "OAUTH_ENABLED"
-        },
-        {
-          "description": "OAuth issuer URL (e.g., https://your-tenant.auth0.com)",
-          "is_required": false,
-          "format": "string",
-          "is_secret": false,
-          "name": "OAUTH_ISSUER"
-        },
-        {
-          "description": "OAuth audience URL",
-          "is_required": false,
-          "format": "string",
-          "is_secret": false,
-          "name": "OAUTH_AUDIENCE"
-        },
-        {
-          "description": "OAuth JWKS URI for token validation",
-          "is_required": false,
-          "format": "string",
-          "is_secret": false,
-          "name": "OAUTH_JWKS_URI"
-        },
-        {
-          "description": "Server URL for OAuth deployment",
-          "is_required": false,
-          "format": "string",
-          "is_secret": false,
-          "name": "SERVER_URL"
         }
       ]
     }
