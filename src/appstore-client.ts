@@ -652,4 +652,217 @@ export class AppStoreConnectClient {
       throw new Error(`Failed to get app info details: ${error.message}`);
     }
   }
+
+  // ---- Auto-renewable subscriptions ----
+
+  /** Subscription groups with their subscriptions and en-US style localizations. */
+  async listSubscriptionGroups(appId: string): Promise<any[]> {
+    const groups = await this.makeRequest(
+      `/v1/apps/${appId}/subscriptionGroups?include=subscriptions,subscriptionGroupLocalizations&limit=50`
+    );
+    const included: any[] = groups.included || [];
+    const byType = (type: string) => included.filter((item) => item.type === type);
+    const subscriptions = byType('subscriptions');
+    const groupLocalizations = byType('subscriptionGroupLocalizations');
+
+    return Promise.all(
+      (groups.data || []).map(async (group: any) => {
+        const subscriptionIds: string[] = (group.relationships?.subscriptions?.data || []).map((s: any) => s.id);
+        const groupLocalizationIds: string[] = (group.relationships?.subscriptionGroupLocalizations?.data || []).map(
+          (l: any) => l.id
+        );
+        return {
+          id: group.id,
+          referenceName: group.attributes?.referenceName,
+          localizations: groupLocalizations
+            .filter((l) => groupLocalizationIds.includes(l.id))
+            .map((l) => ({ id: l.id, ...l.attributes })),
+          subscriptions: await Promise.all(
+            subscriptions
+              .filter((s) => subscriptionIds.includes(s.id))
+              .map(async (s) => ({
+                id: s.id,
+                referenceName: s.attributes?.name,
+                productId: s.attributes?.productId,
+                state: s.attributes?.state,
+                subscriptionPeriod: s.attributes?.subscriptionPeriod,
+                groupLevel: s.attributes?.groupLevel,
+                familySharable: s.attributes?.familySharable,
+                localizations: await this.listSubscriptionLocalizations(s.id),
+              }))
+          ),
+        };
+      })
+    );
+  }
+
+  async listSubscriptionLocalizations(subscriptionId: string): Promise<any[]> {
+    const data = await this.makeRequest(`/v1/subscriptions/${subscriptionId}/subscriptionLocalizations`);
+    return (data.data || []).map((l: any) => ({ id: l.id, ...l.attributes }));
+  }
+
+  /** Customer-facing subscription name / description for one locale. */
+  async updateSubscriptionLocalization(params: {
+    localizationId: string;
+    name?: string;
+    description?: string;
+  }): Promise<any> {
+    const attributes: Record<string, string> = {};
+    if (params.name !== undefined) attributes.name = params.name;
+    if (params.description !== undefined) attributes.description = params.description;
+    const data = await this.makeRequest(`/v1/subscriptionLocalizations/${params.localizationId}`, {
+      method: 'PATCH',
+      body: { data: { type: 'subscriptionLocalizations', id: params.localizationId, attributes } },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  async createSubscriptionLocalization(params: {
+    subscriptionId: string;
+    locale: string;
+    name: string;
+    description?: string;
+  }): Promise<any> {
+    const data = await this.makeRequest('/v1/subscriptionLocalizations', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'subscriptionLocalizations',
+          attributes: { locale: params.locale, name: params.name, description: params.description },
+          relationships: { subscription: { data: { type: 'subscriptions', id: params.subscriptionId } } },
+        },
+      },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  /** Group display name shown on the App Store subscription page. */
+  async updateSubscriptionGroupLocalization(params: {
+    localizationId: string;
+    name?: string;
+    customAppName?: string;
+  }): Promise<any> {
+    const attributes: Record<string, string> = {};
+    if (params.name !== undefined) attributes.name = params.name;
+    if (params.customAppName !== undefined) attributes.customAppName = params.customAppName;
+    const data = await this.makeRequest(`/v1/subscriptionGroupLocalizations/${params.localizationId}`, {
+      method: 'PATCH',
+      body: { data: { type: 'subscriptionGroupLocalizations', id: params.localizationId, attributes } },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  /** Reference name and metadata (not customer-facing) of a subscription. */
+  async updateSubscription(params: {
+    subscriptionId: string;
+    referenceName?: string;
+    reviewNote?: string;
+    familySharable?: boolean;
+    groupLevel?: number;
+  }): Promise<any> {
+    const attributes: Record<string, unknown> = {};
+    if (params.referenceName !== undefined) attributes.name = params.referenceName;
+    if (params.reviewNote !== undefined) attributes.reviewNote = params.reviewNote;
+    if (params.familySharable !== undefined) attributes.familySharable = params.familySharable;
+    if (params.groupLevel !== undefined) attributes.groupLevel = params.groupLevel;
+    const data = await this.makeRequest(`/v1/subscriptions/${params.subscriptionId}`, {
+      method: 'PATCH',
+      body: { data: { type: 'subscriptions', id: params.subscriptionId, attributes } },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  async createSubscription(params: {
+    groupId: string;
+    referenceName: string;
+    productId: string;
+    subscriptionPeriod: string;
+    groupLevel?: number;
+    familySharable?: boolean;
+    reviewNote?: string;
+  }): Promise<any> {
+    const data = await this.makeRequest('/v1/subscriptions', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'subscriptions',
+          attributes: {
+            name: params.referenceName,
+            productId: params.productId,
+            subscriptionPeriod: params.subscriptionPeriod,
+            groupLevel: params.groupLevel,
+            familySharable: params.familySharable,
+            reviewNote: params.reviewNote,
+          },
+          relationships: { group: { data: { type: 'subscriptionGroups', id: params.groupId } } },
+        },
+      },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  /** Price points for one territory; pass customerPrice to filter to a single price. */
+  async listSubscriptionPricePoints(params: {
+    subscriptionId: string;
+    territory: string;
+    customerPrice?: string;
+  }): Promise<any[]> {
+    const points: any[] = [];
+    let next: string | null =
+      `/v1/subscriptions/${params.subscriptionId}/pricePoints?filter[territory]=${params.territory}&limit=200`;
+    while (next) {
+      const page: any = await this.makeRequest(next);
+      points.push(...(page.data || []));
+      const nextUrl: string | undefined = page.links?.next;
+      next = nextUrl ? nextUrl.replace(this.baseUrl, '') : null;
+    }
+    return points
+      .map((p) => ({ id: p.id, customerPrice: p.attributes?.customerPrice, proceeds: p.attributes?.proceeds }))
+      .filter((p) => params.customerPrice === undefined || p.customerPrice === params.customerPrice);
+  }
+
+  async setSubscriptionPrice(params: {
+    subscriptionId: string;
+    pricePointId: string;
+    startDate?: string;
+    preserveCurrentPrice?: boolean;
+  }): Promise<any> {
+    const data = await this.makeRequest('/v1/subscriptionPrices', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'subscriptionPrices',
+          attributes: { startDate: params.startDate, preserveCurrentPrice: params.preserveCurrentPrice },
+          relationships: {
+            subscription: { data: { type: 'subscriptions', id: params.subscriptionId } },
+            subscriptionPricePoint: { data: { type: 'subscriptionPricePoints', id: params.pricePointId } },
+          },
+        },
+      },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  async setSubscriptionAvailability(params: {
+    subscriptionId: string;
+    territories: string[];
+    availableInNewTerritories: boolean;
+  }): Promise<any> {
+    const data = await this.makeRequest('/v1/subscriptionAvailabilities', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'subscriptionAvailabilities',
+          attributes: { availableInNewTerritories: params.availableInNewTerritories },
+          relationships: {
+            subscription: { data: { type: 'subscriptions', id: params.subscriptionId } },
+            availableTerritories: {
+              data: params.territories.map((id) => ({ type: 'territories', id })),
+            },
+          },
+        },
+      },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
 }

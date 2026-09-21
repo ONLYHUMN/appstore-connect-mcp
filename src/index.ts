@@ -7,6 +7,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { HttpTransport } from './transport/HttpTransport.js';
 import { AppStoreConnectClient, type AppStoreConfig } from './appstore-client.js';
+import { runSubscriptionTool, subscriptionToolDefinitions } from './subscription-tools.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -355,6 +356,7 @@ function createMcpServer(): Server {
             required: ['appId'],
           },
         },
+        ...subscriptionToolDefinitions,
       ],
     };
   });
@@ -364,6 +366,9 @@ function createMcpServer(): Server {
     const { name, arguments: args } = request.params;
 
     try {
+      const subscriptionResult = await runSubscriptionTool(appStoreClient, name, args);
+      if (subscriptionResult) return subscriptionResult;
+
       switch (name) {
         case 'list_apps': {
           const apps = await appStoreClient.listApps();
