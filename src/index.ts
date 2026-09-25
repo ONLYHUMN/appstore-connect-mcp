@@ -8,6 +8,7 @@ import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprot
 import { HttpTransport } from './transport/HttpTransport.js';
 import { AppStoreConnectClient, type AppStoreConfig } from './appstore-client.js';
 import { runSubscriptionTool, subscriptionToolDefinitions } from './subscription-tools.js';
+import { runIapTool, iapToolDefinitions } from './iap-tools.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -357,6 +358,7 @@ function createMcpServer(): Server {
           },
         },
         ...subscriptionToolDefinitions,
+        ...iapToolDefinitions,
       ],
     };
   });
@@ -368,6 +370,8 @@ function createMcpServer(): Server {
     try {
       const subscriptionResult = await runSubscriptionTool(appStoreClient, name, args);
       if (subscriptionResult) return subscriptionResult;
+      const iapResult = await runIapTool(appStoreClient, name, args);
+      if (iapResult) return iapResult;
 
       switch (name) {
         case 'list_apps': {
@@ -760,6 +764,7 @@ ${purchases.length === 0 ? 'No in-app purchases found.' : purchases
   .map(
     (iap, index) =>
       `${index + 1}. ${iap.name}
+   • IAP ID: ${iap.id}
    • Product ID: ${iap.productId}
    • Type: ${iap.inAppPurchaseType}
    • State: ${iap.state}

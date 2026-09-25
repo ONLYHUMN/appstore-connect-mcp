@@ -127,10 +127,14 @@ export class AppStoreConnectClient {
         const errorMessage = errorJson.errors?.[0]?.detail || errorJson.errors?.[0]?.title || errorText;
         throw new Error(`App Store API error: ${response.status} - ${errorMessage}`);
       } catch (parseError) {
+        if (parseError instanceof Error && parseError.message.startsWith('App Store API error:')) {
+          throw parseError;
+        }
         throw new Error(`App Store API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
     }
 
+    if (response.status === 204) return {};
     return response.json();
   }
 
@@ -772,6 +776,12 @@ export class AppStoreConnectClient {
     return { id: data.data?.id, ...data.data?.attributes };
   }
 
+  /** Delete a subscription that was never submitted (state MISSING_METADATA / READY_TO_SUBMIT). */
+  async deleteSubscription(subscriptionId: string): Promise<{ deleted: true; id: string }> {
+    await this.makeRequest(`/v1/subscriptions/${subscriptionId}`, { method: 'DELETE' });
+    return { deleted: true, id: subscriptionId };
+  }
+
   async createSubscription(params: {
     groupId: string;
     referenceName: string;
@@ -864,5 +874,228 @@ export class AppStoreConnectClient {
       },
     });
     return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  // ---- Consumable / non-consumable / non-renewing IAPs ----
+
+  async createInAppPurchase(params: {
+    appId: string;
+    name: string;
+    productId: string;
+    inAppPurchaseType: string;
+    reviewNote?: string;
+    familySharable?: boolean;
+  }): Promise<any> {
+    const data = await this.makeRequest('/v2/inAppPurchases', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'inAppPurchases',
+          attributes: {
+            name: params.name,
+            productId: params.productId,
+            inAppPurchaseType: params.inAppPurchaseType,
+            reviewNote: params.reviewNote,
+            familySharable: params.familySharable,
+          },
+          relationships: { app: { data: { type: 'apps', id: params.appId } } },
+        },
+      },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  async updateInAppPurchase(params: {
+    iapId: string;
+    name?: string;
+    reviewNote?: string;
+    familySharable?: boolean;
+  }): Promise<any> {
+    const attributes: Record<string, unknown> = {};
+    if (params.name !== undefined) attributes.name = params.name;
+    if (params.reviewNote !== undefined) attributes.reviewNote = params.reviewNote;
+    if (params.familySharable !== undefined) attributes.familySharable = params.familySharable;
+    const data = await this.makeRequest(`/v2/inAppPurchases/${params.iapId}`, {
+      method: 'PATCH',
+      body: { data: { type: 'inAppPurchases', id: params.iapId, attributes } },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  async listInAppPurchaseLocalizations(iapId: string): Promise<any[]> {
+    const data = await this.makeRequest(`/v2/inAppPurchases/${iapId}/inAppPurchaseLocalizations`);
+    return (data.data || []).map((item: any) => ({ id: item.id, ...item.attributes }));
+  }
+
+  async createInAppPurchaseLocalization(params: {
+    iapId: string;
+    locale: string;
+    name: string;
+    description?: string;
+  }): Promise<any> {
+    const data = await this.makeRequest('/v1/inAppPurchaseLocalizations', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'inAppPurchaseLocalizations',
+          attributes: { locale: params.locale, name: params.name, description: params.description },
+          relationships: { inAppPurchaseV2: { data: { type: 'inAppPurchases', id: params.iapId } } },
+        },
+      },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  async updateInAppPurchaseLocalization(params: {
+    localizationId: string;
+    name?: string;
+    description?: string;
+  }): Promise<any> {
+    const attributes: Record<string, string> = {};
+    if (params.name !== undefined) attributes.name = params.name;
+    if (params.description !== undefined) attributes.description = params.description;
+    const data = await this.makeRequest(`/v1/inAppPurchaseLocalizations/${params.localizationId}`, {
+      method: 'PATCH',
+      body: { data: { type: 'inAppPurchaseLocalizations', id: params.localizationId, attributes } },
+    });
+    return { id: data.data?.id, ...data.data?.attributes };
+  }
+
+  /** Create or update the customer-facing name and description for one locale. */
+  async setInAppPurchaseLocalization(params: {
+    iapId: string;
+    locale: string;
+    name: string;
+    description?: string;
+  }): Promise<any> {
+    const existing = await this.listInAppPurchaseLocalizations(params.iapId);
+    const match = existing.find((item) => item.locale === params.locale);
+    if (match) {
+      return this.updateInAppPurchaseLocalization({
+        localizationId: match.id,
+        name: params.name,
+        description: params.description,
+      });
+    }
+    return this.createInAppPurchaseLocalization(params);
+  }
+
+  async listInAppPurchasePricePoints(params: {
+    iapId: string;
+    territory: string;
+    customerPrice?: string;
+  }): Promise<any[]> {
+    const points: any[] = [];
+    let next: string | null =
+      `/v2/inAppPurchases/${params.iapId}/pricePoints?filter[territory]=${encodeURIComponent(params.territory)}&limit=200`;
+    while (next) {
+      const page: any = await this.makeRequest(next);
+      points.push(...(page.data || []));
+      const nextUrl: string | undefined = page.links?.next;
+      next = nextUrl ? nextUrl.replace(this.baseUrl, '') : null;
+    }
+    return points
+      .map((point) => ({
+        id: point.id,
+        customerPrice: point.attributes?.customerPrice,
+        proceeds: point.attributes?.proceeds,
+      }))
+      .filter((point) => params.customerPrice === undefined || point.customerPrice === params.customerPrice);
+  }
+
+  async setInAppPurchasePrice(params: {
+    iapId: string;
+    territory?: string;
+    pricePointId?: string;
+    customerPrice?: string;
+  }): Promise<any> {
+    const territory = params.territory || 'USA';
+    let pricePointId = params.pricePointId;
+    if (!pricePointId) {
+      if (!params.customerPrice) {
+        throw new Error('Pass pricePointId or customerPrice');
+      }
+      const matches = await this.listInAppPurchasePricePoints({
+        iapId: params.iapId,
+        territory,
+        customerPrice: params.customerPrice,
+      });
+      if (matches.length === 0) {
+        throw new Error(`No price point ${params.customerPrice} in ${territory}`);
+      }
+      pricePointId = matches[0].id;
+    }
+    const inlineId = '${price-1}';
+    const data = await this.makeRequest('/v1/inAppPurchasePriceSchedules', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'inAppPurchasePriceSchedules',
+          relationships: {
+            inAppPurchase: { data: { type: 'inAppPurchases', id: params.iapId } },
+            baseTerritory: { data: { type: 'territories', id: territory } },
+            manualPrices: { data: [{ type: 'inAppPurchasePrices', id: inlineId }] },
+          },
+        },
+        included: [
+          {
+            type: 'inAppPurchasePrices',
+            id: inlineId,
+            attributes: { startDate: null },
+            relationships: {
+              inAppPurchaseV2: { data: { type: 'inAppPurchases', id: params.iapId } },
+              inAppPurchasePricePoint: {
+                data: { type: 'inAppPurchasePricePoints', id: pricePointId },
+              },
+            },
+          },
+        ],
+      },
+    });
+    return { id: data.data?.id, pricePointId, territory, ...data.data?.attributes };
+  }
+
+  async listTerritories(): Promise<string[]> {
+    const ids: string[] = [];
+    let next: string | null = '/v1/territories?limit=200';
+    while (next) {
+      const page: any = await this.makeRequest(next);
+      ids.push(...(page.data || []).map((item: any) => item.id));
+      const nextUrl: string | undefined = page.links?.next;
+      next = nextUrl ? nextUrl.replace(this.baseUrl, '') : null;
+    }
+    return ids;
+  }
+
+  async setInAppPurchaseAvailability(params: {
+    iapId: string;
+    territories?: string[];
+    allTerritories?: boolean;
+    availableInNewTerritories: boolean;
+  }): Promise<any> {
+    let territories = params.territories || [];
+    if (params.allTerritories || territories.length === 0) {
+      territories = await this.listTerritories();
+    }
+    const data = await this.makeRequest('/v1/inAppPurchaseAvailabilities', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'inAppPurchaseAvailabilities',
+          attributes: { availableInNewTerritories: params.availableInNewTerritories },
+          relationships: {
+            inAppPurchase: { data: { type: 'inAppPurchases', id: params.iapId } },
+            availableTerritories: {
+              data: territories.map((id) => ({ type: 'territories', id })),
+            },
+          },
+        },
+      },
+    });
+    return {
+      id: data.data?.id,
+      territoryCount: territories.length,
+      ...data.data?.attributes,
+    };
   }
 }

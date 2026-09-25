@@ -123,6 +123,18 @@ export const subscriptionTools: SubscriptionTool[] = [
   },
   {
     definition: {
+      name: 'delete_subscription',
+      description: 'Delete an auto-renewable subscription that was never submitted for review.',
+      inputSchema: {
+        type: 'object',
+        properties: { subscriptionId: str('subscriptions id') },
+        required: ['subscriptionId'],
+      },
+    },
+    run: (client, args) => client.deleteSubscription(args.subscriptionId),
+  },
+  {
+    definition: {
       name: 'list_subscription_price_points',
       description: 'List price points for a subscription in one territory; filter by customerPrice (e.g. "99.99") to get the id.',
       inputSchema: {

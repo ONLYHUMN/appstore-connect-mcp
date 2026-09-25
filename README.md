@@ -22,7 +22,8 @@ A Model Context Protocol (MCP) server that provides tools for interacting with A
 - **Tester Management**: Add and manage beta testers
 
 ### Additional Features
-- **In-App Purchases**: View and manage in-app purchase products
+- **In-App Purchases**: List IAPs; create products; set store name, description, price, and territory availability
+- **Subscriptions**: Create and update auto-renewable subscriptions, prices, and availability
 - **App Availability**: Check app availability across different regions
 - **Category & Rating**: Access app category and age rating information
 
@@ -104,6 +105,7 @@ Once configured, you can ask Claude to:
 - "What are the recent customer reviews?"
 - "Create a new app store version"
 - "Add a beta tester to my TestFlight group"
+- "Set the IAP display name, description, and US price for uyen.credits.100"
 
 ## Requirements
 
