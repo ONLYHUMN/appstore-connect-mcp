@@ -9,6 +9,13 @@ import { HttpTransport } from './transport/HttpTransport.js';
 import { AppStoreConnectClient, type AppStoreConfig } from './appstore-client.js';
 import { runSubscriptionTool, subscriptionToolDefinitions } from './subscription-tools.js';
 import { runIapTool, iapToolDefinitions } from './iap-tools.js';
+import { runReleaseTool, releaseToolDefinitions } from './release-tools.js';
+import { runTestflightTool, testflightToolDefinitions } from './testflight-tools.js';
+import { runListingTool, listingToolDefinitions } from './listing-tools.js';
+import { runTeamTool, teamToolDefinitions } from './team-tools.js';
+import { runSigningTool, signingToolDefinitions } from './signing-tools.js';
+import { runCatalogTool, catalogToolDefinitions } from './catalog-tools.js';
+import { runRawApiTool, rawApiToolDefinitions } from './raw-api-tools.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -359,6 +366,13 @@ function createMcpServer(): Server {
         },
         ...subscriptionToolDefinitions,
         ...iapToolDefinitions,
+        ...releaseToolDefinitions,
+        ...testflightToolDefinitions,
+        ...listingToolDefinitions,
+        ...teamToolDefinitions,
+        ...signingToolDefinitions,
+        ...catalogToolDefinitions,
+        ...rawApiToolDefinitions,
       ],
     };
   });
@@ -372,6 +386,20 @@ function createMcpServer(): Server {
       if (subscriptionResult) return subscriptionResult;
       const iapResult = await runIapTool(appStoreClient, name, args);
       if (iapResult) return iapResult;
+      const releaseResult = await runReleaseTool(appStoreClient, name, args);
+      if (releaseResult) return releaseResult;
+      const testflightResult = await runTestflightTool(appStoreClient, name, args);
+      if (testflightResult) return testflightResult;
+      const listingResult = await runListingTool(appStoreClient, name, args);
+      if (listingResult) return listingResult;
+      const teamResult = await runTeamTool(appStoreClient, name, args);
+      if (teamResult) return teamResult;
+      const signingResult = await runSigningTool(appStoreClient, name, args);
+      if (signingResult) return signingResult;
+      const catalogResult = await runCatalogTool(appStoreClient, name, args);
+      if (catalogResult) return catalogResult;
+      const rawApiResult = await runRawApiTool(appStoreClient, name, args);
+      if (rawApiResult) return rawApiResult;
 
       switch (name) {
         case 'list_apps': {
@@ -815,6 +843,7 @@ ${availability.territories.length === 0 ? 'All territories' : availability.terri
                 type: 'text',
                 text: details ? `ℹ️  Detailed App Info for App ${appId}:
 
+• App Info ID: ${details.id}
 • App Store State: ${details.appStoreState}
 • Age Rating: ${details.appStoreAgeRating}
 ${details.brazilAgeRating ? `• Brazil Age Rating: ${details.brazilAgeRating}` : ''}

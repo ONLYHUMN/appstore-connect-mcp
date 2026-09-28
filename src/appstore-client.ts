@@ -97,31 +97,56 @@ export class AppStoreConnectClient {
   }
 
   /**
-   * Make authenticated request to App Store Connect API
+   * Make an authenticated App Store Connect request.
+   * Pass a full http(s) URL for Apple upload reservations (no JWT).
    */
-  private async makeRequest(endpoint: string, options?: {
-    method?: string;
-    body?: any;
-  }): Promise<any> {
-    const token = this.generateToken();
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    console.log(`Making ${options?.method || 'GET'} request to: ${url}`);
-    
-    const response = await fetch(url, {
-      method: options?.method || 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: options?.body ? JSON.stringify(options.body) : undefined,
-    });
+  async request(
+    method: string,
+    path: string,
+    options?: {
+      query?: Record<string, string | number | boolean | undefined>;
+      body?: unknown;
+      rawBody?: Buffer;
+      headers?: Record<string, string>;
+    }
+  ): Promise<any> {
+    const isAbsolute = path.startsWith('http://') || path.startsWith('https://');
+    const query = new URLSearchParams();
+    if (options?.query) {
+      for (const [key, value] of Object.entries(options.query)) {
+        if (value !== undefined && value !== '') {
+          query.set(key, String(value));
+        }
+      }
+    }
+    const queryString = query.toString();
+    const url = isAbsolute
+      ? path
+      : `${this.baseUrl}${path}${queryString ? `?${queryString}` : ''}`;
+
+    const headers: Record<string, string> = { ...(options?.headers || {}) };
+    if (!isAbsolute) {
+      headers.Authorization = `Bearer ${this.generateToken()}`;
+      if (options?.rawBody === undefined && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+      }
+    }
+
+    let body: BodyInit | undefined;
+    if (options?.rawBody !== undefined) {
+      body = new Uint8Array(options.rawBody);
+    } else if (options?.body !== undefined) {
+      body = JSON.stringify(options.body);
+    }
+
+    console.log(`Making ${method} request to: ${url}`);
+
+    const response = await fetch(url, { method, headers, body });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`API Error Response (${response.status}):`, errorText);
-      
-      // Try to parse error as JSON for better error messages
+
       try {
         const errorJson = JSON.parse(errorText);
         const errorMessage = errorJson.errors?.[0]?.detail || errorJson.errors?.[0]?.title || errorText;
@@ -135,7 +160,36 @@ export class AppStoreConnectClient {
     }
 
     if (response.status === 204) return {};
-    return response.json();
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return response.json();
+    }
+    const text = await response.text();
+    return text ? { raw: text } : {};
+  }
+
+  private async makeRequest(endpoint: string, options?: {
+    method?: string;
+    body?: any;
+  }): Promise<any> {
+    return this.request(options?.method || 'GET', endpoint, { body: options?.body });
+  }
+
+  async uploadReservedBinary(createResponse: any, file: Buffer): Promise<void> {
+    const operations = createResponse?.data?.attributes?.uploadOperations || [];
+    for (const operation of operations) {
+      const offset = operation.offset || 0;
+      const length = operation.length || file.length;
+      const chunk = file.subarray(offset, offset + length);
+      const headers: Record<string, string> = {};
+      for (const header of operation.requestHeaders || []) {
+        headers[header.name] = header.value;
+      }
+      await this.request(operation.method || 'PUT', operation.url, {
+        rawBody: chunk,
+        headers,
+      });
+    }
   }
 
   /**

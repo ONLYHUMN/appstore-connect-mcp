@@ -21,6 +21,23 @@ A Model Context Protocol (MCP) server that provides tools for interacting with A
 - **Beta Groups**: Manage TestFlight beta testing groups
 - **Tester Management**: Add and manage beta testers
 
+### Release and TestFlight
+- **Submit**: Attach a build, set review details, create or cancel a review submission
+- **Testers**: List testers; remove a tester; add or remove a build on a group
+- **Feedback**: List screenshot feedback and crash submissions
+- **Upload**: Upload a local IPA or PKG when the App Store Connect upload API accepts it
+
+### Store listing writes
+- **Reviews**: Reply to a customer review
+- **Price and availability**: Set app price and sale territories
+- **Media**: Upload or delete screenshots and app previews from a local path
+
+### Team, signing, and catalog
+- **Users and devices**: List, invite, or remove users; register devices
+- **Signing records**: Bundle IDs, capabilities, certificates, and profiles (API records only)
+- **Catalog**: Age rating, encryption, EULA, App Clips, events, product pages, pre-orders, webhooks, sandbox testers, Xcode Cloud runs, Game Center lists
+- **Raw API**: `call_app_store_connect_api` for any `/v1` or `/v2` path
+
 ### Additional Features
 - **In-App Purchases**: List IAPs; create products; set store name, description, price, and territory availability
 - **Subscriptions**: Create and update auto-renewable subscriptions, prices, and availability

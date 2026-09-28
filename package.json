@@ -21,6 +21,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "test": "tsx --test src/**/*.test.ts",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "service": "bash scripts/service.sh",
