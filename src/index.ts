@@ -587,6 +587,7 @@ ${versions
       `${index + 1}. Version ${version.versionString}
    • Platform: ${version.platform}
    • State: ${version.appStoreState}
+   • Version state: ${version.appVersionState || 'Not set'}
    • Release Type: ${version.releaseType || 'MANUAL'}
    • Version ID: ${version.id}
    ${version.earliestReleaseDate ? `• Scheduled: ${new Date(version.earliestReleaseDate).toLocaleDateString()}` : ''}

@@ -122,27 +122,34 @@ const tools = [
   {
     definition: {
       name: 'set_app_availability',
-      description: 'Set the territories where the app is for sale.',
+      description:
+        'Set the territories where the app is for sale. Omit territories or set allTerritories to sell in every territory.',
       inputSchema: {
         type: 'object',
         properties: {
           appId: str('apps id'),
           territories: strList('Territory codes, e.g. ["USA"]'),
+          allTerritories: bool('Sell in every App Store territory'),
           availableInNewTerritories: bool('Sell automatically in territories Apple adds later'),
         },
-        required: ['appId', 'territories', 'availableInNewTerritories'],
+        required: ['appId', 'availableInNewTerritories'],
       },
     },
-    run: (client: AppStoreConnectClient, args: any) =>
-      client.request('POST', '/v1/appAvailabilities', {
+    run: async (client: AppStoreConnectClient, args: any) => {
+      let territories: string[] = args.territories || [];
+      if (args.allTerritories || territories.length === 0) {
+        territories = await client.listTerritories();
+      }
+      return client.request('POST', '/v1/appAvailabilities', {
         body: resource('appAvailabilities', {
           attributes: { availableInNewTerritories: args.availableInNewTerritories },
           relationships: {
             app: rel('apps', args.appId),
-            availableTerritories: relList('territories', args.territories),
+            availableTerritories: relList('territories', territories),
           },
         }),
-      }),
+      });
+    },
   },
   {
     definition: {

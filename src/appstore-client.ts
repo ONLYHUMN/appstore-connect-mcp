@@ -34,6 +34,7 @@ export interface AppStoreVersion {
   versionString: string;
   platform: string;
   appStoreState: string;
+  appVersionState?: string;
   releaseType?: string;
   earliestReleaseDate?: string;
   copyright?: string;
@@ -318,6 +319,7 @@ export class AppStoreConnectClient {
         versionString: version.attributes.versionString,
         platform: version.attributes.platform,
         appStoreState: version.attributes.appStoreState,
+        appVersionState: version.attributes.appVersionState,
         releaseType: version.attributes.releaseType,
         earliestReleaseDate: version.attributes.earliestReleaseDate,
         copyright: version.attributes.copyright,
@@ -909,9 +911,14 @@ export class AppStoreConnectClient {
 
   async setSubscriptionAvailability(params: {
     subscriptionId: string;
-    territories: string[];
+    territories?: string[];
+    allTerritories?: boolean;
     availableInNewTerritories: boolean;
   }): Promise<any> {
+    let territories = params.territories || [];
+    if (params.allTerritories || territories.length === 0) {
+      territories = await this.listTerritories();
+    }
     const data = await this.makeRequest('/v1/subscriptionAvailabilities', {
       method: 'POST',
       body: {
@@ -921,7 +928,7 @@ export class AppStoreConnectClient {
           relationships: {
             subscription: { data: { type: 'subscriptions', id: params.subscriptionId } },
             availableTerritories: {
-              data: params.territories.map((id) => ({ type: 'territories', id })),
+              data: territories.map((id) => ({ type: 'territories', id })),
             },
           },
         },

@@ -169,15 +169,17 @@ export const subscriptionTools: SubscriptionTool[] = [
   {
     definition: {
       name: 'set_subscription_availability',
-      description: 'Set the territories where a subscription is for sale.',
+      description:
+        'Set the territories where a subscription is for sale. Omit territories or set allTerritories to sell in every territory.',
       inputSchema: {
         type: 'object',
         properties: {
           subscriptionId: str('subscriptions id'),
           territories: { type: 'array', items: { type: 'string' }, description: 'Territory codes, e.g. ["USA"]' },
+          allTerritories: bool('Sell in every App Store territory'),
           availableInNewTerritories: bool('Sell automatically in territories Apple adds later'),
         },
-        required: ['subscriptionId', 'territories', 'availableInNewTerritories'],
+        required: ['subscriptionId', 'availableInNewTerritories'],
       },
     },
     run: (client, args) => client.setSubscriptionAvailability(args),
