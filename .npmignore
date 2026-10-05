@@ -8,7 +8,6 @@ src/
 .env.*
 api/
 Dockerfile
-smithery.yaml
 tsconfig.json
 
 # Test files
