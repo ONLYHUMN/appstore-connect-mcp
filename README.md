@@ -66,8 +66,14 @@ A Model Context Protocol (MCP) server that provides tools for interacting with A
    APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
    your_private_key_content
    -----END PRIVATE KEY-----"
+   APPLE_VENDOR_NUMBER=your_vendor_number   # optional, for get_sales_data
    PORT=3992
+   HOST=127.0.0.1
    ```
+
+   - `APPLE_VENDOR_NUMBER`: in App Store Connect, select **Reports** at the top. The vendor number is in the top left, under your legal entity name.
+   - `HOST`: keep `127.0.0.1`. The server has no auth and signs every request with your API key.
+   - Analytics reports need an Admin API key for `create_analytics_report_request`. Use the app id from `list_apps`, not the SKU.
 
 ### Run locally
 

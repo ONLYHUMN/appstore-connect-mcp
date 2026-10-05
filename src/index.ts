@@ -5,7 +5,7 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { HttpTransport } from './transport/HttpTransport.js';
+import { DEFAULT_HOST, HttpTransport } from './transport/HttpTransport.js';
 import { AppStoreConnectClient, type AppStoreConfig } from './appstore-client.js';
 import { runSubscriptionTool, subscriptionToolDefinitions } from './subscription-tools.js';
 import { runIapTool, iapToolDefinitions } from './iap-tools.js';
@@ -16,6 +16,7 @@ import { runTeamTool, teamToolDefinitions } from './team-tools.js';
 import { runSigningTool, signingToolDefinitions } from './signing-tools.js';
 import { runCatalogTool, catalogToolDefinitions } from './catalog-tools.js';
 import { runRawApiTool, rawApiToolDefinitions } from './raw-api-tools.js';
+import { runReportTool, reportToolDefinitions } from './report-tools.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -102,33 +103,6 @@ function createMcpServer(): Server {
         {
           name: 'get_app_info',
           description: 'Get detailed information about a specific app',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              appId: {
-                type: 'string',
-                description: 'The App Store Connect app ID',
-              },
-            },
-            required: ['appId'],
-          },
-        },
-        {
-          name: 'get_sales_data',
-          description: 'Get sales and revenue data for a specific date',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              date: {
-                type: 'string',
-                description: 'Date in YYYY-MM-DD format (optional, defaults to today)',
-              },
-            },
-          },
-        },
-        {
-          name: 'get_analytics',
-          description: 'Get app analytics data including installs, sessions, and retention',
           inputSchema: {
             type: 'object',
             properties: {
@@ -373,6 +347,7 @@ function createMcpServer(): Server {
         ...signingToolDefinitions,
         ...catalogToolDefinitions,
         ...rawApiToolDefinitions,
+        ...reportToolDefinitions,
       ],
     };
   });
@@ -400,6 +375,8 @@ function createMcpServer(): Server {
       if (catalogResult) return catalogResult;
       const rawApiResult = await runRawApiTool(appStoreClient, name, args);
       if (rawApiResult) return rawApiResult;
+      const reportResult = await runReportTool(appStoreClient, name, args);
+      if (reportResult) return reportResult;
 
       switch (name) {
         case 'list_apps': {
@@ -411,7 +388,7 @@ function createMcpServer(): Server {
                 text: `Found ${apps.length} apps:\n\n${apps
                   .map(
                     (app) =>
-                      `• ${app.name} (${app.bundleId})\n  Status: ${app.status}\n  App Store ID: ${app.appStoreId || 'N/A'}\n  Platform: ${app.platform || 'N/A'}`
+                      `• ${app.name} (${app.bundleId})\n  App ID (use as appId): ${app.id}\n  SKU: ${app.sku || 'N/A'}\n  Status: ${app.status || 'N/A'}\n  Platform: ${app.platform || 'N/A'}`
                   )
                   .join('\n\n')}`,
               },
@@ -441,49 +418,11 @@ function createMcpServer(): Server {
                 text: `App Information:
 • Name: ${appInfo.name}
 • Bundle ID: ${appInfo.bundleId}
-• App Store ID: ${appInfo.appStoreId || 'N/A'}
+• App ID: ${appInfo.id}
+• SKU: ${appInfo.sku || 'N/A'}
 • Status: ${appInfo.status}
 • Version: ${appInfo.version || 'N/A'}
 • Platform: ${appInfo.platform || 'N/A'}`,
-              },
-            ],
-          };
-        }
-
-        case 'get_sales_data': {
-          const { date } = args as { date?: string };
-          const salesData = await appStoreClient.getSalesData(date);
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Sales Data for ${salesData.date}:
-• Revenue: ${salesData.currency} ${salesData.revenue.toFixed(2)}
-• Units Sold: ${salesData.units}
-• Transaction Count: ${salesData.transactionCount}
-• Currency: ${salesData.currency}`,
-              },
-            ],
-          };
-        }
-
-        case 'get_analytics': {
-          const { appId } = args as { appId: string };
-          const analytics = await appStoreClient.getAnalytics(appId);
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Analytics for App ${appId}:
-• Total Installs: ${analytics.installs?.toLocaleString() || 'N/A'}
-• Total Sessions: ${analytics.sessions?.toLocaleString() || 'N/A'}
-• Active Users: ${analytics.activeUsers?.toLocaleString() || 'N/A'}
-• Retention Rates:
-  - Day 1: ${((analytics.retention?.day1 || 0) * 100).toFixed(1)}%
-  - Day 7: ${((analytics.retention?.day7 || 0) * 100).toFixed(1)}%
-  - Day 30: ${((analytics.retention?.day30 || 0) * 100).toFixed(1)}%`,
               },
             ],
           };
@@ -900,11 +839,10 @@ async function main() {
   console.log('🌐 Starting HTTP transport...');
   const httpTransport = new HttpTransport({
     port: parseInt(process.env.PORT || '3001', 10),
-    host: process.env.HOST || '0.0.0.0',
-    cors: {
-      origin: process.env.CORS_ORIGIN || '*',
-      credentials: true,
-    },
+    host: process.env.HOST || DEFAULT_HOST,
+    cors: process.env.CORS_ORIGIN
+      ? { origin: process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()) }
+      : undefined,
   });
 
   httpTransport.setMcpServerFactory(() => createMcpServer());

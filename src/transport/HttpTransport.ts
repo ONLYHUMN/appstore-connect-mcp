@@ -29,6 +29,26 @@ export interface McpServerFactory {
   (): Server
 }
 
+export const DEFAULT_HOST = '127.0.0.1'
+const LOOPBACK_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
+
+export function isLoopbackHost(host: string): boolean {
+  return LOOPBACK_HOSTNAMES.has(host.toLowerCase())
+}
+
+/**
+ * The server has no auth and signs requests with the team API key, so a loopback bind must also
+ * reject other Host headers. That blocks DNS rebinding from a web page in a local browser.
+ */
+export function isAllowedHostHeader(hostHeader: string | undefined, bindHost: string): boolean {
+  if (!isLoopbackHost(bindHost)) return true
+  if (!hostHeader) return false
+  const hostname = hostHeader.startsWith('[')
+    ? hostHeader.slice(0, hostHeader.indexOf(']') + 1)
+    : hostHeader.split(':')[0]
+  return isLoopbackHost(hostname)
+}
+
 export class HttpTransport {
   private app: express.Application
   private server?: HttpServer
@@ -41,8 +61,20 @@ export class HttpTransport {
     this.setupRoutes()
   }
 
+  private get bindHost(): string {
+    return this.config.host || DEFAULT_HOST
+  }
+
   private setupMiddleware(): void {
     this.app.set('trust proxy', 1)
+
+    this.app.use((req: Request, res: Response, next: NextFunction) => {
+      if (!isAllowedHostHeader(req.headers.host, this.bindHost)) {
+        res.status(403).json({ error: 'Host not allowed' })
+        return
+      }
+      next()
+    })
 
     this.app.use(helmet({
       contentSecurityPolicy: false,
@@ -50,8 +82,8 @@ export class HttpTransport {
     }))
 
     this.app.use(cors({
-      origin: this.config.cors?.origin || true,
-      credentials: this.config.cors?.credentials || true,
+      origin: this.config.cors?.origin ?? false,
+      credentials: this.config.cors?.credentials ?? false,
       methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'mcp-session-id', 'last-event-id']
     }))
@@ -248,9 +280,9 @@ export class HttpTransport {
       try {
         this.server = createServer(this.app)
 
-        this.server.listen(this.config.port, this.config.host || '0.0.0.0', () => {
-          console.log(`🌐 Apple Store Connect MCP HTTP Transport listening on ${this.config.host || '0.0.0.0'}:${this.config.port}`)
-          console.log(`📡 MCP endpoint: http://${this.config.host || 'localhost'}:${this.config.port}/mcp`)
+        this.server.listen(this.config.port, this.bindHost, () => {
+          console.log(`🌐 Apple Store Connect MCP HTTP Transport listening on ${this.bindHost}:${this.config.port}`)
+          console.log(`📡 MCP endpoint: http://${this.bindHost}:${this.config.port}/mcp`)
           resolve()
         })
 

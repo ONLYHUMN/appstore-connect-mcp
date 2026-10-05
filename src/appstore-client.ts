@@ -15,18 +15,10 @@ export interface AppInfo {
   id: string;
   name: string;
   bundleId: string;
-  appStoreId?: string;
+  sku?: string;
   status: string;
   version?: string;
   platform?: string;
-}
-
-export interface SalesData {
-  date: string;
-  revenue: number;
-  currency: string;
-  transactionCount: number;
-  units: number;
 }
 
 export interface AppStoreVersion {
@@ -109,6 +101,8 @@ export class AppStoreConnectClient {
       body?: unknown;
       rawBody?: Buffer;
       headers?: Record<string, string>;
+      /** Sales reports and analytics segments are gzip files, not JSON. */
+      responseType?: 'auto' | 'buffer';
     }
   ): Promise<any> {
     const isAbsolute = path.startsWith('http://') || path.startsWith('https://');
@@ -160,6 +154,9 @@ export class AppStoreConnectClient {
       }
     }
 
+    if (options?.responseType === 'buffer') {
+      return Buffer.from(await response.arrayBuffer());
+    }
     if (response.status === 204) return {};
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
@@ -204,7 +201,7 @@ export class AppStoreConnectClient {
         id: app.id,
         name: app.attributes.name,
         bundleId: app.attributes.bundleId,
-        appStoreId: app.attributes.sku,
+        sku: app.attributes.sku,
         status: app.attributes.appStoreState,
         platform: app.attributes.primaryLocale,
       })) || [];
@@ -228,7 +225,7 @@ export class AppStoreConnectClient {
         id: app.id,
         name: app.attributes.name,
         bundleId: app.attributes.bundleId,
-        appStoreId: app.attributes.sku,
+        sku: app.attributes.sku,
         status: app.attributes.appStoreState,
         version: app.attributes.contentRightsDeclaration,
         platform: app.attributes.primaryLocale,
@@ -236,52 +233,6 @@ export class AppStoreConnectClient {
     } catch (error: any) {
       console.error('Error getting app info:', error);
       throw new Error(`Failed to fetch app info from Apple Store Connect: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get sales reports for a specific date
-   */
-  async getSalesData(date?: string): Promise<SalesData> {
-    const targetDate = date || new Date().toISOString().split('T')[0];
-    
-    try {
-      const endpoint = `/v1/salesReports?filter[frequency]=DAILY&filter[reportDate]=${targetDate}&filter[reportType]=SALES&filter[vendorNumber]=${this.config.issuerId}`;
-      const data = await this.makeRequest(endpoint);
-      
-      // Calculate totals from sales report
-      const totalRevenue = data.data?.reduce((sum: number, item: any) => {
-        return sum + (parseFloat(item.attributes?.proceeds || 0));
-      }, 0) || 0;
-
-      const totalUnits = data.data?.reduce((sum: number, item: any) => {
-        return sum + (parseInt(item.attributes?.units || 0));
-      }, 0) || 0;
-
-      return {
-        date: targetDate,
-        revenue: totalRevenue,
-        currency: 'USD',
-        transactionCount: data.data?.length || 0,
-        units: totalUnits,
-      };
-    } catch (error: any) {
-      console.error('Error getting sales data:', error);
-      throw new Error(`Failed to fetch sales data from Apple Store Connect: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get app analytics data
-   */
-  async getAnalytics(appId: string): Promise<any> {
-    try {
-      // Note: Analytics API might require different endpoints or permissions
-      const endpoint = `/v1/apps/${appId}/analyticsReportRequests`;
-      return await this.makeRequest(endpoint);
-    } catch (error: any) {
-      console.error('Error getting analytics:', error);
-      throw new Error(`Failed to fetch analytics from Apple Store Connect: ${error.message}`);
     }
   }
 

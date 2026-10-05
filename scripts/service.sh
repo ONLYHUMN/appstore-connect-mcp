@@ -104,6 +104,12 @@ cmd_stop() {
   ensure_macos
   if is_loaded; then
     launchctl bootout "${domain}/${LABEL}"
+    # bootout returns before launchd finishes unloading; restart must not see a stale service.
+    local attempt
+    for attempt in {1..50}; do
+      is_loaded || break
+      sleep 0.1
+    done
     echo "Stopped ${LABEL}"
   else
     echo "${LABEL} is not running"
