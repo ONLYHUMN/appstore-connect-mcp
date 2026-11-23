@@ -2,6 +2,53 @@ import type { AppStoreConnectClient } from './appstore-client.js';
 import { compactAttributes, rel, resource } from './jsonapi.js';
 import { bool, createToolModule, requireConfirm, str } from './tool-runner.js';
 
+const reviewItemLinks: Record<string, { field: string; type: string }> = {
+  appStoreVersions: { field: 'appStoreVersion', type: 'appStoreVersions' },
+  appCustomProductPageVersions: {
+    field: 'appCustomProductPageVersion',
+    type: 'appCustomProductPageVersions',
+  },
+  appAssetLibraryImages: { field: 'appAssetLibraryImage', type: 'appAssetLibraryImages' },
+  appAssetLibraryVideos: { field: 'appAssetLibraryVideo', type: 'appAssetLibraryVideos' },
+  appEvents: { field: 'appEvent', type: 'appEvents' },
+  appStoreVersionExperiments: {
+    field: 'appStoreVersionExperiment',
+    type: 'appStoreVersionExperiments',
+  },
+  appStoreVersionExperimentsV2: {
+    field: 'appStoreVersionExperimentV2',
+    type: 'appStoreVersionExperiments',
+  },
+  backgroundAssetVersions: { field: 'backgroundAssetVersion', type: 'backgroundAssetVersions' },
+  gameCenterAchievementVersions: {
+    field: 'gameCenterAchievementVersion',
+    type: 'gameCenterAchievementVersions',
+  },
+  gameCenterActivityVersions: {
+    field: 'gameCenterActivityVersion',
+    type: 'gameCenterActivityVersions',
+  },
+  gameCenterChallengeVersions: {
+    field: 'gameCenterChallengeVersion',
+    type: 'gameCenterChallengeVersions',
+  },
+  gameCenterLeaderboardSetVersions: {
+    field: 'gameCenterLeaderboardSetVersion',
+    type: 'gameCenterLeaderboardSetVersions',
+  },
+  gameCenterLeaderboardVersions: {
+    field: 'gameCenterLeaderboardVersion',
+    type: 'gameCenterLeaderboardVersions',
+  },
+  inAppPurchaseVersions: { field: 'inAppPurchaseVersion', type: 'inAppPurchaseVersions' },
+  subscriptionVersions: { field: 'subscriptionVersion', type: 'subscriptionVersions' },
+  subscriptionGroupVersions: {
+    field: 'subscriptionGroupVersion',
+    type: 'subscriptionGroupVersions',
+  },
+  retentionMessageVersions: { field: 'retentionMessageVersion', type: 'retentionMessageVersions' },
+};
+
 const tools = [
   {
     definition: {
@@ -112,25 +159,43 @@ const tools = [
   {
     definition: {
       name: 'add_review_submission_item',
-      description: 'Add an App Store version to a review submission.',
+      description:
+        'Add one item to a review submission. Pass versionId for an App Store version, or itemType plus itemId for a subscription, event, or other review item.',
       inputSchema: {
         type: 'object',
         properties: {
           reviewSubmissionId: str('reviewSubmissions id'),
-          versionId: str('appStoreVersions id'),
+          versionId: str('appStoreVersions id. Use this or itemType plus itemId.'),
+          itemType: str(
+            'Review item type, for example subscriptionVersions, inAppPurchaseVersions, appEvents, or backgroundAssetVersions'
+          ),
+          itemId: str('Id of the item named by itemType'),
         },
-        required: ['reviewSubmissionId', 'versionId'],
+        required: ['reviewSubmissionId'],
       },
     },
-    run: (client: AppStoreConnectClient, { reviewSubmissionId, versionId }: any) =>
-      client.request('POST', '/v1/reviewSubmissionItems', {
+    run: (client: AppStoreConnectClient, args: any) => {
+      if (args.versionId && (args.itemType || args.itemId)) {
+        throw new Error('Pass versionId, or itemType with itemId.');
+      }
+      const itemType = args.versionId ? 'appStoreVersions' : args.itemType;
+      const itemId = args.versionId || args.itemId;
+      if (!itemType || !itemId) {
+        throw new Error('Provide versionId, or itemType and itemId.');
+      }
+      const link = reviewItemLinks[itemType];
+      if (!link) {
+        throw new Error(`Unsupported itemType: ${itemType}`);
+      }
+      return client.request('POST', '/v1/reviewSubmissionItems', {
         body: resource('reviewSubmissionItems', {
           relationships: {
-            reviewSubmission: rel('reviewSubmissions', reviewSubmissionId),
-            appStoreVersion: rel('appStoreVersions', versionId),
+            reviewSubmission: rel('reviewSubmissions', args.reviewSubmissionId),
+            [link.field]: rel(link.type, itemId),
           },
         }),
-      }),
+      });
+    },
   },
   {
     definition: {

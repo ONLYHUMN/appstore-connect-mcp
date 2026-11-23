@@ -17,6 +17,7 @@ import { runSigningTool, signingToolDefinitions } from './signing-tools.js';
 import { runCatalogTool, catalogToolDefinitions } from './catalog-tools.js';
 import { runRawApiTool, rawApiToolDefinitions } from './raw-api-tools.js';
 import { runReportTool, reportToolDefinitions } from './report-tools.js';
+import { runApiUpdateTool, apiUpdateToolDefinitions } from './api-update-tools.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -158,7 +159,12 @@ function createMcpServer(): Server {
               },
               earliestReleaseDate: {
                 type: 'string',
-                description: 'ISO 8601 date string for scheduled release (required when releaseType is SCHEDULED)',
+                description: 'RFC 3339 date. A date without releaseType sets the release type to SCHEDULED.',
+              },
+              reviewType: {
+                type: 'string',
+                description: 'APP_STORE or NOTARIZATION',
+                enum: ['APP_STORE', 'NOTARIZATION'],
               },
               buildId: {
                 type: 'string',
@@ -348,6 +354,7 @@ function createMcpServer(): Server {
         ...catalogToolDefinitions,
         ...rawApiToolDefinitions,
         ...reportToolDefinitions,
+        ...apiUpdateToolDefinitions,
       ],
     };
   });
@@ -377,6 +384,8 @@ function createMcpServer(): Server {
       if (rawApiResult) return rawApiResult;
       const reportResult = await runReportTool(appStoreClient, name, args);
       if (reportResult) return reportResult;
+      const apiUpdateResult = await runApiUpdateTool(appStoreClient, name, args);
+      if (apiUpdateResult) return apiUpdateResult;
 
       switch (name) {
         case 'list_apps': {
@@ -460,6 +469,7 @@ ${builds
             copyright, 
             releaseType, 
             earliestReleaseDate,
+            reviewType,
             buildId 
           } = args as { 
             appId: string;
@@ -468,6 +478,7 @@ ${builds
             copyright?: string;
             releaseType?: string;
             earliestReleaseDate?: string;
+            reviewType?: string;
             buildId?: string;
           };
 
@@ -478,6 +489,7 @@ ${builds
             copyright,
             releaseType,
             earliestReleaseDate,
+            reviewType,
             buildId,
           });
 
@@ -529,6 +541,7 @@ ${versions
    • Version state: ${version.appVersionState || 'Not set'}
    • Release Type: ${version.releaseType || 'MANUAL'}
    • Version ID: ${version.id}
+   • Downloadable: ${version.downloadable === undefined || version.downloadable === null ? 'Not set' : version.downloadable}
    ${version.earliestReleaseDate ? `• Scheduled: ${new Date(version.earliestReleaseDate).toLocaleDateString()}` : ''}
    ${version.copyright ? `• Copyright: ${version.copyright}` : ''}
    • Created: ${new Date(version.createdDate).toLocaleDateString()}`

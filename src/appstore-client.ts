@@ -29,8 +29,22 @@ export interface AppStoreVersion {
   appVersionState?: string;
   releaseType?: string;
   earliestReleaseDate?: string;
+  downloadable?: boolean | null;
   copyright?: string;
   createdDate: string;
+}
+
+/** A release date applies only to a scheduled release. */
+export function releaseTypeForEarliestDate(
+  releaseType: string | undefined,
+  earliestReleaseDate: string | undefined
+): string | undefined {
+  if (!earliestReleaseDate) return releaseType;
+  if (!releaseType) return 'SCHEDULED';
+  if (releaseType !== 'SCHEDULED') {
+    throw new Error('earliestReleaseDate applies only when releaseType is SCHEDULED.');
+  }
+  return releaseType;
 }
 
 export class AppStoreConnectClient {
@@ -273,6 +287,7 @@ export class AppStoreConnectClient {
         appVersionState: version.attributes.appVersionState,
         releaseType: version.attributes.releaseType,
         earliestReleaseDate: version.attributes.earliestReleaseDate,
+        downloadable: version.attributes.downloadable,
         copyright: version.attributes.copyright,
         createdDate: version.attributes.createdDate,
       })) || [];
@@ -487,18 +502,22 @@ export class AppStoreConnectClient {
     copyright?: string;
     releaseType?: string;
     earliestReleaseDate?: string;
+    reviewType?: string;
     buildId?: string;
   }): Promise<AppStoreVersion> {
     try {
+      const releaseType =
+        releaseTypeForEarliestDate(params.releaseType, params.earliestReleaseDate) || 'MANUAL';
       const body = {
         data: {
           type: 'appStoreVersions',
           attributes: {
             platform: params.platform,
             versionString: params.versionString,
-            copyright: params.copyright,
-            releaseType: params.releaseType || 'MANUAL',
-            earliestReleaseDate: params.earliestReleaseDate,
+            ...(params.copyright ? { copyright: params.copyright } : {}),
+            releaseType,
+            ...(params.earliestReleaseDate ? { earliestReleaseDate: params.earliestReleaseDate } : {}),
+            ...(params.reviewType ? { reviewType: params.reviewType } : {}),
           },
           relationships: {
             app: {
